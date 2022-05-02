@@ -1,0 +1,25 @@
+#!/bin/sh
+
+set -e -x
+
+python -m pip install -r requirements-ci.txt
+pip install -r requirements-test.txt
+if [ ${1:-latest} = minimal ] ; then
+    requirements-builder --req requirements.txt --level min > requirements-min.txt
+    requirements-builder --req requirements-optional.txt --level min >> requirements-min.txt
+    # Install cython and pycairo first, these are needed during install of others
+    pip install $(grep -E '^(Cython|pycairo)==' requirements-min.txt)
+    pip install -r requirements-min.txt
+else
+    pip install Cython pycairo
+    pip install --upgrade-strategy eager -U -r requirements-optional.txt
+    if [ ${1:-latest} = edge ] ; then
+        pip install --upgrade https://github.com/translate/translate/archive/master.zip
+        pip install --upgrade https://github.com/WeblateOrg/language-data/archive/main.zip
+        pip install --upgrade https://github.com/WeblateOrg/translation-finder/archive/main.zip
+        pip install --upgrade --pre Django
+    fi
+fi
+
+# Verify that deps are consistent
+pip check
